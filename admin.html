@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkinLab CMS — Admin Dashboard (Demo)</title>
+<style>
+:root{--gold:#C2A36B;--gold-dark:#9C7F4A;--black:#111;--line:#E8DDC8;--cream:#FAF6EF}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--cream);color:#222;line-height:1.5}
+.banner{background:#111;color:#fff;padding:12px 18px;font-size:13px}.banner b{color:var(--gold)}
+header{background:#fff;border-bottom:1px solid var(--line);padding:14px 18px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;align-items:center}
+h1{font-size:22px;margin:0}h2{font-size:20px}h3{font-size:16px}
+.wrap{max-width:1200px;margin:0 auto;padding:18px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}.tabs button{border:1px solid var(--line);background:#fff;padding:9px 13px;border-radius:999px;cursor:pointer;font-weight:700}.tabs button.on{background:var(--gold);border-color:var(--gold-dark)}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.kpi b{font-size:26px;display:block}table{width:100%;border-collapse:collapse;font-size:14px}th,td{border-bottom:1px solid #eee;padding:8px;text-align:left;vertical-align:top}
+input,select,textarea{width:100%;padding:9px;border:1px solid #ddd;border-radius:9px;font-size:14px;margin-bottom:8px;background:#FFFDF7}
+label{font-size:12px;font-weight:700;display:block}button.btn{background:var(--gold);border:0;padding:9px 15px;border-radius:999px;font-weight:800;cursor:pointer;margin:2px}button.btn.small{padding:6px 10px;font-size:12px}button.btn.danger{background:#e57373;color:#fff}
+.badge{display:inline-block;padding:3px 9px;border-radius:999px;background:#F3EAD3;font-size:12px;font-weight:700}
+.msg{padding:10px;border-radius:10px;margin-bottom:12px}.ok{background:#EAF6EC}.err{background:#FDECEA}
+@media(max-width:800px){.grid,.grid3{grid-template-columns:1fr 1fr}}
+</style></head><body>
+<div class="banner"><b>DEMO CMS ONLY</b> — Data stays in this browser (localStorage). No server, no real login, no real notifications, no real payments. Do NOT enter real customer data. Roles below are UI-only in this demo; production must enforce them on a server. <a href="index.html" style="color:var(--gold)">← View public demo site</a></div>
+<header><div><h1>SkinLab Aesthetics — Salon CMS</h1><div style="font-size:13px;color:#666">DHA Phase 4, Lahore &bull; Currency PKR &bull; Timezone Asia/Karachi</div></div>
+<div><label>Demo role (UI only)</label><select id="roleSel" style="width:auto"><option>Owner</option><option>Manager</option><option>Receptionist</option><option>Beautician</option><option>Content Manager</option><option>Customer</option></select>
+<button class="btn small" onclick="resetDemo()">Reset demo data</button></div></header>
+<div class="wrap">
+<div id="msg"></div>
+<div class="tabs" id="tabs"></div>
+<div id="view"></div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const uid=()=> 'id'+Math.random().toString(36).slice(2,9);
+const todayStr=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+function load(k,f){try{const v=JSON.parse(localStorage.getItem(k));return v==null?f:v}catch(e){return f}}
+function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function logAudit(a,d){const l=load('sl_audit',[]);l.unshift({t:new Date().toLocaleString('en-GB'),a,d});save('sl_audit',l.slice(0,100))}
+function logNotif(msg){const l=load('sl_notif',[]);l.unshift({t:new Date().toLocaleString('en-GB'),msg});save('sl_notif',l.slice(0,100))}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+const DEF_SERVICES=[
+{id:'s1',name:'HydraFacial',cat:'Facials',desc:'Cleanse, exfoliate and hydrate in one treatment.',price:8000,promo:'',dur:60,active:true,staff:'All',seoT:'HydraFacial in DHA Lahore | SkinLab',seoD:'HydraFacial at SkinLab Aesthetics, DHA Phase 4, Lahore.',img:''},
+{id:'s2',name:'Glow HydraFacial (12 steps)',cat:'Facials',desc:'12-step glow facial.',price:7500,promo:'',dur:60,active:true,staff:'All',seoT:'',seoD:'',img:''},
+{id:'s3',name:'OxyGeneo Hydra Glow Facial',cat:'Facials',desc:'OxyGeneo glow facial.',price:20000,promo:'',dur:60,active:true,staff:'All',seoT:'',seoD:'',img:''},
+{id:'s4',name:'Laser Hair Removal — Upper Lip',cat:'Laser',desc:'Virtually painless Soprano Titanium laser.',price:1500,promo:'',dur:20,active:true,staff:'All',seoT:'',seoD:'',img:''},
+{id:'s5',name:'Laser Hair Removal — Full Body',cat:'Laser',desc:'Full body laser, offer price as publicly listed.',price:25000,promo:'',dur:60,active:true,staff:'All',seoT:'',seoD:'',img:''},
+{id:'s6',name:'Dermal Fillers',cat:'Injectables',desc:'Hyaluronic acid fillers.',price:25000,promo:'',dur:40,active:true,staff:'All',seoT:'',seoD:'',img:''},
+{id:'s7',name:'Pigmentation Treatment',cat:'Skin Concerns',desc:'Peels, laser or targeted serums.',price:20000,promo:'',dur:45,active:true,staff:'All',seoT:'',seoD:'',img:''},
+{id:'s8',name:'Acne Treatment',cat:'Skin Concerns',desc:'Doctor-designed acne plan.',price:15000,promo:'',dur:45,active:true,staff:'All',seoT:'',seoD:'',img:''},
+{id:'s9',name:'Hair PRP',cat:'Hair',desc:'PRP for hair regrowth, based on diagnosis.',price:15000,promo:'',dur:45,active:true,staff:'All',seoT:'',seoD:'',img:''},
+];
+const DEF_STAFF=[
+{id:'st1',name:'Dr. Shanze Shafique',spec:'Consultant Dermatologist',hours:'Mon–Sat 12:00–20:00',breaks:'',leave:'',services:'All'},
+{id:'st2',name:'Dr. Zonera Awais',spec:'Consultant Dermatologist',hours:'Mon–Sat 12:00–20:00',breaks:'',leave:'',services:'All'},
+{id:'st3',name:'Dr. Subheen Fatima',spec:'Dermatologist & Aesthetic Physician',hours:'Mon–Sat 12:00–20:00',breaks:'',leave:'',services:'All'},
+{id:'st4',name:'Dr. Hamza',spec:'Aesthetic Physician',hours:'Mon–Sat 12:00–20:00',breaks:'',leave:'',services:'All'},
+];
+const DEF_SETTINGS={business:'SkinLab Aesthetics',phone:'0325 555 2088',phone2:'0325 555 2089',email:'hello@skinlabaesthetics.pk',address:'85 CC-A Commercial, Sector DD, Phase 4, DHA Lahore',currency:'PKR',tz:'Asia/Karachi',hours:'Mon–Sat 12:00–20:00, Sun Closed',leadHours:4,advanceDays:60,bufferMin:15,cancelPolicy:'Cancel or reschedule at least 24 hours before your appointment (owner to confirm).',notifyEmail:true,notifySMS:false,notifyWA:true};
+const DEF_PAGES={heroTitle:'The best aesthetic clinic in Lahore for natural, doctor-led results',heroSub:"Where London's excellence meets Lahore's trust. Every treatment is planned by qualified dermatologists — with medical-grade technology and transparent prices.",about:'SkinLab Aesthetics brings London-standard aesthetic expertise to DHA Phase 4, Lahore, with doctor-planned treatments and transparent prices.'};
+let services=load('sl_services',DEF_SERVICES), packages=load('sl_packages',[]), staff=load('sl_staff',DEF_STAFF), appointments=load('sl_appointments',[]), customers=load('sl_customers',[]), gallery=load('sl_gallery',[]), reviews=load('sl_reviews',[]), promos=load('sl_promos',[]), blog=load('sl_blog',[]), settings=load('sl_settings',DEF_SETTINGS), pages=load('sl_pages',DEF_PAGES), seo=load('sl_seo',[{page:'Home',title:'Best Aesthetic Clinic in Lahore | SkinLab Aesthetics',desc:'Doctor-led aesthetic clinic in DHA Phase 4, Lahore.',canon:'https://lp.skinlabaesthetics.pk/'},{page:'Services',title:'',desc:'',canon:''}]);
+// Import public demo bookings (Requested) once
+(function importPublic(){
+  const pub=load('sl_public_bookings',[]);
+  let changed=false;
+  pub.forEach(b=>{ if(!appointments.find(a=>a.publicId===b.id)){ appointments.push({id:uid(),publicId:b.id,ref:'SL-'+new Date().getFullYear()+'-'+Math.floor(1000+Math.random()*9000),customer:b.name,phone:b.phone,email:'',service:b.treatment,staff:'Any',date:b.date,time:b.time,status:'Requested',pay:'Unpaid',notes:'From public demo booking form. Demo only — not sent to clinic.',created:todayStr()}); changed=true; }});
+  if(changed){save('sl_appointments',appointments); logAudit('Import public bookings','Imported '+pub.length+' public demo request(s)');}
+})();
+function saveAll(){save('sl_services',services);save('sl_packages',packages);save('sl_staff',staff);save('sl_appointments',appointments);save('sl_customers',customers);save('sl_gallery',gallery);save('sl_reviews',reviews);save('sl_promos',promos);save('sl_blog',blog);save('sl_settings',settings);save('sl_pages',pages);save('sl_seo',seo)}
+function showMsg(t,ok=true){$('#msg').innerHTML='<div class="msg '+(ok?'ok':'err')+'">'+esc(t)+'</div>'; setTimeout(()=>{$('#msg').innerHTML=''},6000)}
+function toMin(t){const [h,m]=t.split(':').map(Number);return h*60+m}
+function svcPrice(s){return s.promo!==''&&s.promo!=null?Number(s.promo):Number(s.price)}
+function findSvc(name){return services.find(s=>s.name===name)}
+function apptPrice(a){const s=findSvc(a.service); return s?svcPrice(s):0}
+function checkAvail(staffName,date,time,svcName,excludeId){
+  const s=findSvc(svcName); if(!s) return 'Service not found.';
+  const d=new Date(date+'T00:00:00'); if(isNaN(d)) return 'Invalid date.';
+  if(d.getDay()===0) return 'Clinic is closed on Sundays.';
+  const start=toMin(time), end=start+Number(s.dur)+Number(settings.bufferMin);
+  if(start<12*60||end>20*60) return 'Outside clinic hours (12:00–20:00, including duration + buffer).';
+  const now=new Date(); const apptDT=new Date(date+'T'+time+':00');
+  if(apptDT < new Date(now.getTime()+Number(settings.leadHours)*3600*1000)) return 'Booking needs at least '+settings.leadHours+' hours lead time.';
+  const maxD=new Date(); maxD.setDate(maxD.getDate()+Number(settings.advanceDays)); if(apptDT>maxD) return 'Bookings are only open '+settings.advanceDays+' days ahead.';
+  const staffList = staffName==='Any' ? staff : staff.filter(x=>x.name===staffName);
+  for(const st of staffList){
+    if(st.leave && st.leave.split(',').map(x=>x.trim()).includes(date)) continue;
+    const busy = st.breaks ? st.breaks.split(',').map(x=>x.trim()) : [];
+    // breaks as HH:MM-HH:MM
+    for(const br of busy){ if(br.includes('-')){const [bs,be]=br.split('-'); if(start<toMin(be)&&toMin(bs)<end) return 'Overlaps a break for '+st.name+'.';}}
+    const clash=appointments.filter(a=>a.id!==excludeId && (a.staff===st.name||a.staff==='Any'||staffName==='Any') && a.date===date && ['Requested','Confirmed'].includes(a.status)).some(a=>{
+      const as=findSvc(a.service); const ad=as?Number(as.dur):60; const ast=toMin(a.time), aen=ast+ad+Number(settings.bufferMin); return start<aen && ast<end;
+    });
+    if(!clash) return {staff:st.name};
+  }
+  return 'No eligible staff available at that time (overlap / leave / break). Try another time.';
+}
+function setStatus(id,st){
+  const a=appointments.find(x=>x.id===id); if(!a) return;
+  a.status=st; saveAll(); logAudit('Appointment '+st, a.ref+' — '+a.customer+' / '+a.service+' / '+a.date+' '+a.time);
+  if(st==='Confirmed') logNotif('Would send confirmation ('+(settings.notifyWA?'WhatsApp':'')+(settings.notifyEmail?', Email':'')+') to '+a.phone+' for '+a.ref+' — NOT sent in demo.');
+  if(st==='Cancelled') logNotif('Would send cancellation notice to '+a.phone+' for '+a.ref+' — NOT sent in demo.');
+  showMsg('Appointment '+a.ref+' set to '+st+'.'); render();
+}
+function delItem(arr,id,key){ const i=arr.findIndex(x=>x.id===id); if(i>=0){arr.splice(i,1); saveAll(); logAudit('Deleted '+key, id); showMsg('Deleted.'); render();}}
+function resetDemo(){ if(!confirm('Reset ALL demo CMS data to the seeded defaults?')) return; ['sl_services','sl_packages','sl_staff','sl_appointments','sl_customers','sl_gallery','sl_reviews','sl_promos','sl_blog','sl_settings','sl_pages','sl_seo','sl_audit','sl_notif','sl_public_bookings'].forEach(k=>localStorage.removeItem(k)); location.reload(); }
+</script>
+<script>
+const TABS=[
+{name:'Dashboard',roles:['Owner','Manager','Receptionist','Beautician']},
+{name:'Appointments',roles:['Owner','Manager','Receptionist','Beautician','Customer']},
+{name:'Services',roles:['Owner','Manager']},
+{name:'Packages',roles:['Owner','Manager']},
+{name:'Staff',roles:['Owner','Manager']},
+{name:'Customers',roles:['Owner','Manager','Receptionist']},
+{name:'Gallery',roles:['Owner','Content Manager']},
+{name:'Reviews',roles:['Owner','Content Manager']},
+{name:'Promotions',roles:['Owner','Content Manager']},
+{name:'Blog',roles:['Owner','Content Manager']},
+{name:'Pages',roles:['Owner','Content Manager']},
+{name:'Reports',roles:['Owner','Manager']},
+{name:'SEO',roles:['Owner','Content Manager']},
+{name:'Settings',roles:['Owner']},
+];
+let cur='Dashboard';
+function roleTabs(){const r=$('#roleSel').value; return TABS.filter(t=>t.roles.includes(r))}
+function renderTabs(){ const list=roleTabs(); if(!list.find(t=>t.name===cur)) cur=list[0].name;
+ $('#tabs').innerHTML=list.map(t=>'<button class="'+(t.name===cur?'on':'')+'" onclick="goTab(\''+t.name+'\')">'+t.name+'</button>').join('');
+}
+function goTab(n){cur=n; renderTabs(); render();}
+function field(label,name,val,typ='text'){return '<label>'+label+'</label><input type="'+typ+'" name="'+name+'" value="'+esc(val==null?'':val)+'">'}
+function table(head,rows){return '<div style="overflow:auto"><table><tr>'+head.map(h=>'<th>'+h+'</th>').join('')+'</tr>'+rows.join('')+'</table></div>'}
+function render(){
+ const v=$('#view'); const role=$('#roleSel').value;
+ if(cur==='Dashboard'){
+   const up=appointments.filter(a=>a.date>=todayStr()&&['Requested','Confirmed'].includes(a.status)).length;
+   const pend=appointments.filter(a=>a.status==='Requested').length;
+   const comp=appointments.filter(a=>a.status==='Completed').length;
+   const canc=appointments.filter(a=>a.status==='Cancelled').length;
+   const cust=new Set(appointments.map(a=>a.phone)).size;
+   const pop={}; appointments.filter(a=>a.status==='Completed').forEach(a=>pop[a.service]=(pop[a.service]||0)+1);
+   const popular=Object.entries(pop).sort((a,b)=>b[1]-a[1]).slice(0,5).map(x=>x[0]+' ('+x[1]+')').join(', ')||'—';
+   const collected=appointments.filter(a=>a.status==='Completed'&&a.pay==='Paid').reduce((s,a)=>s+apptPrice(a),0);
+   const unpaid=appointments.filter(a=>a.status==='Completed'&&a.pay!=='Paid').reduce((s,a)=>s+apptPrice(a),0);
+   const notif=load('sl_notif',[]).slice(0,8).map(n=>'<li>'+esc(n.t)+' — '+esc(n.msg)+'</li>').join('')||'<li>No notifications yet (demo log only).</li>';
+   v.innerHTML='<div class="grid"><div class="card kpi"><b>'+up+'</b>Upcoming (Requested/Confirmed)</div><div class="card kpi"><b>'+pend+'</b>Pending requests</div><div class="card kpi"><b>'+comp+'</b>Completed</div><div class="card kpi"><b>'+canc+'</b>Cancelled</div><div class="card kpi"><b>'+cust+'</b>Customers (by phone, from bookings)</div><div class="card kpi"><b>PKR '+collected.toLocaleString()+'</b>Collected (Completed + Paid only)</div><div class="card kpi"><b>PKR '+unpaid.toLocaleString()+'</b>Unpaid completed bookings — NOT revenue</div><div class="card kpi"><b>Popular:</b> '+esc(popular)+'</div></div><div class="card"><h3>Notifications log (demo — nothing is actually sent)</h3><ul>'+notif+'</ul></div><div class="card"><h3>Next appointments</h3>'+table(['Ref','Customer','Service','Date/Time','Staff','Status'],appointments.filter(a=>a.date>=todayStr()).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).slice(0,10).map(a=>'<tr><td>'+esc(a.ref)+'</td><td>'+esc(a.customer)+'</td><td>'+esc(a.service)+'</td><td>'+esc(a.date)+' '+esc(a.time)+'</td><td>'+esc(a.staff)+'</td><td>'+esc(a.status)+'</td></tr>'))+'</div>';
+ }
+ if(cur==='Appointments'){
+   const roleFilter = role==='Beautician' ? '<p>Beautician demo view: filter by your name in the staff column below (UI only).</p>' : '';
+   v.innerHTML=roleFilter+'<div class="card"><h3>New appointment (admin)</h3><form onsubmit="return addAppt(event)"><div class="grid3">'+
+   '<div><label>Customer name</label><input name="customer" required></div><div><label>Phone</label><input name="phone" required></div><div><label>Service</label><select name="service">'+services.filter(s=>s.active).map(s=>'<option>'+esc(s.name)+'</option>').join('')+'</select></div>'+
+   '<div><label>Staff</label><select name="staff"><option>Any</option>'+staff.map(s=>'<option>'+esc(s.name)+'</option>').join('')+'</select></div><div><label>Date</label><input type="date" name="date" required></div><div><label>Time</label><input type="time" name="time" required></div>'+
+   '<div><label>Payment</label><select name="pay"><option>Unpaid</option><option>Deposit</option><option>Paid</option></select></div><div><label>Notes</label><input name="notes"></div></div><button class="btn">Check availability &amp; add as Requested</button></form></div>'+
+   '<div class="card"><label>Filter status</label><select id="fStatus" onchange="render()"><option>All</option><option>Requested</option><option>Confirmed</option><option>Completed</option><option>Cancelled</option><option>No-Show</option></select> <label>Search</label><input id="fSearch" placeholder="Name, phone, service, ref" oninput="render()" style="max-width:320px"></div>'+
+   '<div class="card">'+table(['Ref','Customer / Phone','Service','Staff','Date/Time','Status / Pay','Actions'],appointments.slice().sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time)).filter(a=>{const fs=$('#fStatus')?.value; const q=($('#fSearch')?.value||'').toLowerCase(); return (!fs||fs==='All'||a.status===fs) && (!q||(a.customer+' '+a.phone+' '+a.service+' '+a.ref).toLowerCase().includes(q))}).map(a=>'<tr><td>'+esc(a.ref)+'</td><td>'+esc(a.customer)+'<br>'+esc(a.phone)+'</td><td>'+esc(a.service)+'</td><td>'+esc(a.staff)+'</td><td>'+esc(a.date)+' '+esc(a.time)+'</td><td>'+esc(a.status)+' / '+esc(a.pay)+'</td><td><button class="btn small" onclick="setStatus(\''+a.id+'\',\'Confirmed\')">Confirm</button><button class="btn small" onclick="setStatus(\''+a.id+'\',\'Completed\')">Complete</button><button class="btn small" onclick="setStatus(\''+a.id+'\',\'Cancelled\')">Cancel</button><button class="btn small" onclick="setStatus(\''+a.id+'\',\'No-Show\')">No-Show</button><button class="btn small danger" onclick="delItem(appointments,\''+a.id+'\',\'appointment\')">Delete</button><br><button class="btn small" onclick="resched(\''+a.id+'\')">Reschedule</button></td></tr>').join('')||'<tr><td colspan="7">No appointments yet. Use the public booking form on index.html or the form above to create a demo request.</td></tr>')+'</div>';
+   // preserve filter values after render is hard; acceptable for demo
+ }
+ if(cur==='Services'){
+   v.innerHTML='<div class="card"><h3>Add / edit service</h3><form onsubmit="return saveSvc(event)"><input type="hidden" name="id"><div class="grid3">'+field('Name','name','')+field('Category','cat','')+field('Price PKR','price','', 'number')+field('Promo price PKR (blank = none)','promo','')+field('Duration minutes','dur','60','number')+'<div><label>Active</label><select name="active"><option value="true">Active</option><option value="false">Inactive</option></select></div><div><label>Staff eligibility</label><input name="staff" value="All"></div><div><label>Image URL (optional)</label><input name="img"></div></div><label>Description</label><textarea name="desc"></textarea><label>SEO title</label><input name="seoT"><label>SEO description</label><input name="seoD"><button class="btn">Save service</button></form><p style="font-size:13px">Durations were not publicly listed — defaults are editable placeholders for the owner to confirm. Do not present them as clinic facts until confirmed.</p></div>'+
+   '<div class="card">'+table(['Service','Category','Price / Promo','Duration','Status','Actions'],services.map(s=>'<tr><td>'+esc(s.name)+'</td><td>'+esc(s.cat)+'</td><td>PKR '+Number(s.price).toLocaleString()+(s.promo!==''?' / promo PKR '+Number(s.promo).toLocaleString():'')+'</td><td>'+esc(s.dur)+' min</td><td>'+(s.active?'Active':'Inactive')+'</td><td><button class="btn small" onclick="editSvc(\''+s.id+'\')">Edit</button><button class="btn small danger" onclick="delItem(services,\''+s.id+'\',\'service\')">Delete</button></td></tr>').join(''))+'</div>';
+ }
+ if(cur==='Packages'){
+   v.innerHTML='<div class="card"><h3>Add package (bridal / party / bundle)</h3><form onsubmit="return savePkg(event)"><input type="hidden" name="id"><div class="grid3">'+field('Package name','name','')+field('Type','type','Bridal')+field('Price PKR (owner to set)','price','', 'number')+field('Validity','validity','')+'</div><label>Included services (comma-separated)</label><input name="inc"><label>Terms</label><textarea name="terms"></textarea><label>Status</label><select name="active"><option>Draft</option><option>Active</option></select><button class="btn">Save package</button></form><p style="font-size:13px">Seed packages are intentionally none — package prices were not publicly listed, so do not invent them. Create packages as Draft until the owner sets a price.</p></div>'+
+   '<div class="card">'+table(['Package','Type','Price','Included','Status','Actions'],packages.map(p=>'<tr><td>'+esc(p.name)+'</td><td>'+esc(p.type)+'</td><td>'+(p.price?('PKR '+Number(p.price).toLocaleString()):'To be set')+'</td><td>'+esc(p.inc)+'</td><td>'+esc(p.active)+'</td><td><button class="btn small danger" onclick="delItem(packages,\''+p.id+'\',\'package\')">Delete</button></td></tr>').join('')||'<tr><td colspan="6">No packages yet.</td></tr>')+'</div>';
+ }
+ if(cur==='Staff'){
+   v.innerHTML='<div class="card"><h3>Add / edit staff</h3><form onsubmit="return saveStaff(event)"><input type="hidden" name="id"><div class="grid3">'+field('Name','name','')+field('Specialty','spec','')+field('Working hours','hours','Mon–Sat 12:00–20:00')+'</div><label>Breaks (comma-separated HH:MM-HH:MM, blank = none)</label><input name="breaks"><label>Leave dates (comma-separated YYYY-MM-DD)</label><input name="leave"><label>Service eligibility</label><input name="services" value="All"><button class="btn">Save staff</button></form></div>'+
+   '<div class="card">'+table(['Name','Specialty','Hours','Breaks / Leave','Appointments assigned'],staff.map(s=>'<tr><td>'+esc(s.name)+'</td><td>'+esc(s.spec)+'</td><td>'+esc(s.hours)+'</td><td>'+esc(s.breaks||'—')+' / '+esc(s.leave||'—')+'</td><td>'+appointments.filter(a=>a.staff===s.name).length+'</td></tr>').join(''))+'</div>';
+ }
+ if(cur==='Customers'){
+   const custMap={}; appointments.forEach(a=>{custMap[a.phone]=custMap[a.phone]||{name:a.customer,phone:a.phone,count:0,last:''}; custMap[a.phone].count++; if(a.date>custMap[a.phone].last) custMap[a.phone].last=a.date;});
+   const rows=Object.values(custMap).map(c=>'<tr><td>'+esc(c.name)+'</td><td>'+esc(c.phone)+'</td><td>'+c.count+'</td><td>'+esc(c.last)+'</td></tr>').join('')||'<tr><td colspan="4">No customers yet — customers are derived from bookings in this demo. No fictional customers are seeded.</td></tr>';
+   v.innerHTML='<div class="card"><h3>Customers (from bookings)</h3>'+table(['Name','Phone','Bookings','Last booking'],[rows])+'</div><div class="card"><h3>Add customer note / preference</h3><form onsubmit="return saveCust(event)"><div class="grid3">'+field('Name','name','')+field('Phone','phone','')+field('Email (optional)','email','')+'</div><label>Preferences / notes</label><textarea name="notes"></textarea><button class="btn">Save customer record</button></form><p style="font-size:13px">Only collect what is needed for bookings. Do not enter real customer data into this demo.</p></div>';
+ }
+ if(cur==='Gallery'){
+   v.innerHTML='<div class="card"><h3>Add gallery item (image URL — no server upload in demo)</h3><form onsubmit="return saveGal(event)"><div class="grid3">'+field('Caption','cap','')+field('Category','cat','Facials')+field('Image URL','url','')+'</div><label>Alt text</label><input name="alt"><label><input type="checkbox" name="beforeAfter" style="width:auto"> Before / after image</label><label><input type="checkbox" name="consent" style="width:auto"> Customer consent obtained (required to publish identifiable customer photos)</label><button class="btn">Save gallery item</button></form></div>'+
+   '<div class="card">'+table(['Caption','Category','Before/After','Consent','Status'],gallery.map(g=>'<tr><td>'+esc(g.cap)+'</td><td>'+esc(g.cat)+'</td><td>'+(g.beforeAfter?'Yes':'No')+'</td><td>'+(g.consent?'Yes':'No')+'</td><td>'+esc(g.status)+(g.cat.toLowerCase().includes('customer')&&!g.consent?' — blocked from publishing without consent':'')+'</td></tr>').join('')||'<tr><td colspan="5">No gallery items yet.</td></tr>')+'</div>';
+ }
+ if(cur==='Reviews'){
+   v.innerHTML='<div class="card"><h3>Submit a testimonial (goes to Pending — never auto-published)</h3><form onsubmit="return saveRev(event)"><div class="grid3">'+field('Name','name','')+field('Treatment','treat','')+field('Rating 1–5','rating','5','number')+'</div><label>Testimonial text</label><textarea name="text" required></textarea><button class="btn">Submit for review</button></form><p style="font-size:13px">No reviews are seeded. Do not publish unverified testimonials as authentic.</p></div>'+
+   '<div class="card">'+table(['Name / Treatment','Rating','Text','Status','Actions'],reviews.map(r=>'<tr><td>'+esc(r.name)+'<br>'+esc(r.treat)+'</td><td>'+esc(r.rating)+'</td><td>'+esc(r.text)+'</td><td>'+esc(r.status)+'</td><td><button class="btn small" onclick="setRev(\''+r.id+'\',\'Published\')">Publish</button><button class="btn small" onclick="setRev(\''+r.id+'\',\'Rejected\')">Reject</button></td></tr>').join('')||'<tr><td colspan="5">No reviews yet.</td></tr>')+'</div>';
+ }
+ if(cur==='Promotions'){
+   v.innerHTML='<div class="card"><h3>Add promotion / coupon</h3><form onsubmit="return savePromo(event)"><div class="grid3">'+field('Code','code','')+field('Discount % (blank if PKR)','pct','', 'number')+field('Discount PKR (blank if %)','amt','', 'number')+field('Start date','start','', 'date')+field('Expiry date','end','', 'date')+field('Usage limit','limit','', 'number')+'</div><label>Eligibility</label><input name="elig" value="All services"><button class="btn">Save promotion</button></form></div>'+
+   '<div class="card">'+table(['Code','Discount','Validity','Used / Limit','Status'],promos.map(p=>'<tr><td>'+esc(p.code)+'</td><td>'+(p.pct?esc(p.pct)+'%':'PKR '+esc(p.amt))+'</td><td>'+esc(p.start)+' to '+esc(p.end)+'</td><td>'+(p.used||0)+' / '+esc(p.limit)+'</td><td>Active</td></tr>').join('')||'<tr><td colspan="5">No promotions yet.</td></tr>')+'</div>';
+ }
+ if(cur==='Blog'){
+   v.innerHTML='<div class="card"><h3>Add blog article</h3><form onsubmit="return saveBlog(event)"><div class="grid3">'+field('Title','title','')+field('Category','cat','Skincare')+field('Featured image URL','img','')+'</div><label>Meta title</label><input name="seoT"><label>Meta description</label><input name="seoD"><label>Content</label><textarea name="content" rows="5"></textarea><label>Status</label><select name="status"><option>Draft</option><option>Published</option></select><button class="btn">Save article</button></form></div>'+
+   '<div class="card">'+table(['Title','Category','Slug','Status','Date'],blog.map(b=>'<tr><td>'+esc(b.title)+'</td><td>'+esc(b.cat)+'</td><td>'+esc(b.slug)+'</td><td>'+esc(b.status)+'</td><td>'+esc(b.date)+'</td></tr>').join('')||'<tr><td colspan="5">No articles yet.</td></tr>')+'</div>';
+ }
+ if(cur==='Pages'){
+   v.innerHTML='<div class="card"><h3>Page content (applies to public demo hero on same origin)</h3><form onsubmit="return savePages(event)"><label>Home hero heading</label><input name="heroTitle" value="'+esc(pages.heroTitle)+'"><label>Home hero subtext</label><textarea name="heroSub">'+esc(pages.heroSub)+'</textarea><label>About text</label><textarea name="about">'+esc(pages.about)+'</textarea><button class="btn">Save pages</button></form><p style="font-size:13px">In production (WordPress/server), page edits would update the live site directly. In this static demo, only the hero heading/subtext are read back by index.html.</p></div>';
+ }
+ if(cur==='Reports'){
+   v.innerHTML='<div class="card"><h3>Reports</h3><form onsubmit="return doReport(event)"><div class="grid3"><div><label>From</label><input type="date" name="from" value="'+todayStr().slice(0,8)+'01"></div><div><label>To</label><input type="date" name="to" value="'+todayStr()+'"></div></div><button class="btn">Run report</button></form><div id="repOut"><p>Run a report to see date-filtered results. Revenue below counts only Completed + Paid as Collected; Completed + Unpaid is shown separately and is never presented as revenue.</p></div></div>';
+ }
+ if(cur==='SEO'){
+   v.innerHTML='<div class="card"><h3>SEO per page</h3><form onsubmit="return saveSEO(event)"><div class="grid3">'+field('Page','page','Home')+field('Meta title','title','')+'</div><label>Meta description</label><input name="desc"><label>Canonical URL</label><input name="canon"><button class="btn">Save SEO entry</button></form></div>'+
+   '<div class="card">'+table(['Page','Meta title','Meta description','Canonical'],seo.map(s=>'<tr><td>'+esc(s.page)+'</td><td>'+esc(s.title)+'</td><td>'+esc(s.desc)+'</td><td>'+esc(s.canon)+'</td></tr>').join(''))+'</div>';
+ }
+ if(cur==='Settings'){
+   v.innerHTML='<div class="card"><h3>Business settings</h3><form onsubmit="return saveSettings(event)"><div class="grid3">'+field('Business name','business',settings.business)+field('Phone','phone',settings.phone)+field('Email','email',settings.email)+field('Currency','currency',settings.currency)+field('Timezone','tz',settings.tz)+field('Lead time (hours)','leadHours',settings.leadHours,'number')+field('Advance booking limit (days)','advanceDays',settings.advanceDays,'number')+field('Buffer (minutes)','bufferMin',settings.bufferMin,'number')+'</div><label>Address</label><input name="address" value="'+esc(settings.address)+'"><label>Opening hours</label><input name="hours" value="'+esc(settings.hours)+'"><label>Cancellation policy</label><textarea name="cancelPolicy">'+esc(settings.cancelPolicy)+'</textarea><label>Notification channels (demo log only — nothing is actually sent until a provider is configured)</label><p><label><input type="checkbox" name="notifyEmail" style="width:auto" '+(settings.notifyEmail?'checked':'')+'> Email</label> <label><input type="checkbox" name="notifySMS" style="width:auto" '+(settings.notifySMS?'checked':'')+'> SMS</label> <label><input type="checkbox" name="notifyWA" style="width:auto" '+(settings.notifyWA?'checked':'')+'> WhatsApp</label></p><button class="btn">Save settings</button></form></div>'+
+   '<div class="card"><h3>Audit log (last 20)</h3><ul>'+load('sl_audit',[]).slice(0,20).map(a=>'<li>'+esc(a.t)+' — '+esc(a.a)+' — '+esc(a.d)+'</li>').join('')||'<li>No actions yet.</li>'+'</ul></div>';
+ }
+}
+function addAppt(e){e.preventDefault(); const f=e.target; const svc=f.service.value, date=f.date.value, time=f.time.value, staffN=f.staff.value;
+ const chk=checkAvail(staffN,date,time,svc,''); if(typeof chk==='string'){showMsg(chk,false); return false;}
+ appointments.push({id:uid(),ref:'SL-'+new Date().getFullYear()+'-'+Math.floor(1000+Math.random()*9000),customer:f.customer.value,phone:f.phone.value,email:'',service:svc,staff:chk.staff,date,time,status:'Requested',pay:f.pay.value,notes:f.notes.value,created:todayStr()}); saveAll(); logAudit('Appointment created (Requested)', svc+' / '+date+' '+time); showMsg('Appointment added as Requested for '+chk.staff+'. It is NOT confirmed until an admin confirms it.'); render(); return false;}
+function resched(id){const a=appointments.find(x=>x.id===id); const d=prompt('New date (YYYY-MM-DD):',a.date); if(!d) return; const t=prompt('New time (HH:MM, 24h):',a.time); if(!t) return; const chk=checkAvail(a.staff==='Any'?'Any':a.staff,d,t,a.service,id); if(typeof chk==='string'){alert(chk); return;} a.date=d; a.time=t; a.staff=chk.staff; saveAll(); logAudit('Appointment rescheduled', a.ref+' → '+d+' '+t); logNotif('Would send reschedule notice to '+a.phone+' for '+a.ref+' — NOT sent in demo.'); showMsg('Rescheduled to '+d+' '+t+'.'); render();}
+function saveSvc(e){e.preventDefault(); const f=e.target, id=f.id.value; const obj={id:id||uid(),name:f.name.value,cat:f.cat.value,price:Number(f.price.value||0),promo:f.promo.value,dur:Number(f.dur.value||60),active:f.active.value==='true',staff:f.staff.value,desc:f.desc.value,seoT:f.seoT.value,seoD:f.seoD.value,img:f.img.value}; if(id){const i=services.findIndex(s=>s.id===id); services[i]=obj;} else services.push(obj); saveAll(); logAudit('Service saved',obj.name); showMsg('Service saved.'); render(); return false;}
+function editSvc(id){const s=services.find(x=>x.id===id); const f=document.querySelector('form'); if(!f) return; f.id.value=s.id; f.name.value=s.name; f.cat.value=s.cat; f.price.value=s.price; f.promo.value=s.promo; f.dur.value=s.dur; f.active.value=String(s.active); f.staff.value=s.staff; f.desc.value=s.desc; f.seoT.value=s.seoT; f.seoD.value=s.seoD; f.img.value=s.img; window.scrollTo(0,0);}
+function savePkg(e){e.preventDefault(); const f=e.target; packages.push({id:uid(),name:f.name.value,type:f.type.value,price:f.price.value,validity:f.validity.value,inc:f.inc.value,terms:f.terms.value,active:f.active.value}); saveAll(); logAudit('Package saved',f.name.value); showMsg('Package saved as '+f.active.value+'.'); render(); return false;}
+function saveStaff(e){e.preventDefault(); const f=e.target, id=f.id.value; const obj={id:id||uid(),name:f.name.value,spec:f.spec.value,hours:f.hours.value,breaks:f.breaks.value,leave:f.leave.value,services:f.services.value}; if(id){staff[staff.findIndex(s=>s.id===id)]=obj;} else staff.push(obj); saveAll(); logAudit('Staff saved',obj.name); showMsg('Staff saved.'); render(); return false;}
+function saveCust(e){e.preventDefault(); const f=e.target; customers.push({id:uid(),name:f.name.value,phone:f.phone.value,email:f.email.value,notes:f.notes.value}); saveAll(); logAudit('Customer record saved',f.name.value); showMsg('Customer record saved (demo only).'); render(); return false;}
+function saveGal(e){e.preventDefault(); const f=e.target; const isCust=f.cat.value.toLowerCase().includes('customer'); const status=(isCust&&!f.consent.checked)?'Draft (blocked: consent required)':'Published'; gallery.push({id:uid(),cap:f.cap.value,cat:f.cat.value,url:f.url.value,alt:f.alt.value,beforeAfter:f.beforeAfter.checked,consent:f.consent.checked,status}); saveAll(); logAudit('Gallery saved',f.cap.value+' — '+status); showMsg('Gallery saved: '+status); render(); return false;}
+function saveRev(e){e.preventDefault(); const f=e.target; reviews.push({id:uid(),name:f.name.value,treat:f.treat.value,rating:f.rating.value,text:f.text.value,status:'Pending'}); saveAll(); logAudit('Review submitted (Pending)',f.name.value); showMsg('Review submitted as Pending — it will not show publicly until approved.'); render(); return false;}
+function setRev(id,st){const r=reviews.find(x=>x.id===id); r.status=st; saveAll(); logAudit('Review '+st,r.name); showMsg('Review '+st+'.'); render();}
+function savePromo(e){e.preventDefault(); const f=e.target; promos.push({id:uid(),code:f.code.value,pct:f.pct.value,amt:f.amt.value,start:f.start.value,end:f.end.value,limit:f.limit.value,elig:f.elig.value,used:0}); saveAll(); logAudit('Promotion saved',f.code.value); showMsg('Promotion saved.'); render(); return false;}
+function saveBlog(e){e.preventDefault(); const f=e.target; const slug=f.title.value.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); blog.push({id:uid(),title:f.title.value,cat:f.cat.value,img:f.img.value,seoT:f.seoT.value,seoD:f.seoD.value,content:f.content.value,status:f.status.value,slug,date:todayStr()}); saveAll(); logAudit('Blog saved',f.title.value); showMsg('Blog article saved as '+f.status.value+'.'); render(); return false;}
+function savePages(e){e.preventDefault(); const f=e.target; pages={heroTitle:f.heroTitle.value,heroSub:f.heroSub.value,about:f.about.value}; save('sl_pages',pages); logAudit('Pages saved','Home hero / About'); showMsg('Pages saved. Public demo hero will use the new heading on next load (same origin).'); render(); return false;}
+function saveSEO(e){e.preventDefault(); const f=e.target; seo.push({page:f.page.value,title:f.title.value,desc:f.desc.value,canon:f.canon.value}); save('sl_seo',seo); logAudit('SEO saved',f.page.value); showMsg('SEO entry saved (demo record).'); render(); return false;}
+function saveSettings(e){e.preventDefault(); const f=e.target; settings={...settings,business:f.business.value,phone:f.phone.value,email:f.email.value,currency:f.currency.value,tz:f.tz.value,leadHours:Number(f.leadHours.value),advanceDays:Number(f.advanceDays.value),bufferMin:Number(f.bufferMin.value),address:f.address.value,hours:f.hours.value,cancelPolicy:f.cancelPolicy.value,notifyEmail:f.notifyEmail.checked,notifySMS:f.notifySMS.checked,notifyWA:f.notifyWA.checked}; save('sl_settings',settings); logAudit('Settings saved','Booking rules updated'); showMsg('Settings saved.'); render(); return false;}
+function doReport(e){e.preventDefault(); const f=e.target, from=f.from.value, to=f.to.value; const list=appointments.filter(a=>a.date>=from&&a.date<=to); const comp=list.filter(a=>a.status==='Completed'), canc=list.filter(a=>a.status==='Cancelled'), nos=list.filter(a=>a.status==='No-Show'); const collected=comp.filter(a=>a.pay==='Paid').reduce((s,a)=>s+apptPrice(a),0); const unpaid=comp.filter(a=>a.pay!=='Paid').reduce((s,a)=>s+apptPrice(a),0); const pop={}; comp.forEach(a=>pop[a.service]=(pop[a.service]||0)+1); const popStr=Object.entries(pop).sort((a,b)=>b[1]-a[1]).map(x=>x[0]+': '+x[1]).join(', ')||'—';
+ $('#repOut').innerHTML='<div class="card"><p><b>Period:</b> '+from+' to '+to+'</p><p>Completed: '+comp.length+' &bull; Cancelled: '+canc.length+' &bull; No-Show: '+nos.length+' &bull; Total in period: '+list.length+'</p><p><b>Collected (Completed + Paid only): PKR '+collected.toLocaleString()+'</b></p><p>Unpaid completed bookings: PKR '+unpaid.toLocaleString()+' — NOT revenue.</p><p><b>Popular services:</b> '+esc(popStr)+'</p></div>'; return false;}
+$('#roleSel').addEventListener('change',()=>{renderTabs(); render();});
+renderTabs(); render();
+</script>
+
